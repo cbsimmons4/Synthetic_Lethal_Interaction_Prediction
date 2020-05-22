@@ -1,0 +1,138 @@
+% Class and packages {{{
+
+\documentclass{sig-alternate-2013}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Packages
+
+% \usepackage{algorithm}
+%\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{color}
+\usepackage{comment}
+\usepackage{epsfig}
+\usepackage{graphicx}
+%\usepackage{subfigure}
+\usepackage[labelformat=simple]{subcaption}
+\usepackage{tabularx}
+%\usepackage[hyphens]{url}
+\usepackage{hyperref}
+\usepackage{wrapfig}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{xspace}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{textcomp}
+
+
+
+\usepackage{tikz}
+\usepackage{cleveref}
+\usepackage{algorithm}
+\newcommand*\circled[1]{\tikz[baseline=(char.base)]{
+            \node[shape=circle,draw,inner sep=0.5pt] (char) {#1};}}
+\newenvironment{widelist}{\begin{list}{$\bullet$}{\setlength{\leftmargin}{.70cm}\setlength{\itemsep}{.00cm} }}{\end{list}}
+
+% Subfigure "Figure 1(a)" style formatting
+\renewcommand\thesubfigure{(\alph{subfigure})}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Per-author comment commands
+% NOTE: To generate output without comments, build with 'make finalized'.
+% This generates a new output file with the suffix '-final.pdf'.
+
+\newcommand{\etal}{et~al.\xspace}
+
+\ifdefined\isFinalized
+
+\newcommand{\todo}[1]{}
+\newcommand{\wontfix}[1]{}
+\newcommand{\done}[1]{}
+\usepackage{ulem}
+\normalem
+\newcommand{\minor}[2]{{\color{Orange}{\sout{#1}}\color{Blue}{#2}}}
+\newcommand{\frank}[1]{{\color{Green}{#1}}}
+
+\newcommand{\addcamera}[1]{#1}
+\newcommand{\subcamera}[1]{}
+
+\else
+
+%\newcommand{\todo}[1]{ {\color{Red}{TODO: \emph{#1}} } }
+\newcommand{\todo}[1]{}
+\newcommand{\wontfix}[1]{}
+\newcommand{\done}[1]{}
+
+\usepackage{ulem}
+\normalem
+\newcommand{\addcamera}[1]{{\color{Blue}{#1}}}
+\newcommand{\subcamera}[1]{{\color{Red}{\sout{#1}}}}
+
+\fi
+
+\usepackage{balance}
+% }}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Cleveref configuration {{{
+
+\crefname{figure}{Figure}{Figures}
+\crefname{equation}{Equation}{Equations}
+\crefname{table}{Table}{Tables}
+\crefname{section}{Section}{Sections}
+\crefname{subfigure}{Figure}{Figure}
+
+% }}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Title and authors % {{{
+
+
+\title{Identifying Synthetic Lethal Interactions in Genes \\ Using Node2Vec and Random Forest}
+
+\author{
+ {\setlength{\tabcolsep}{0.48em}
+ \begin{tabular}{@{}cccc@{}}
+ Cameron Simmons & Aravind Koneru & Hunter Klamut & Namrita Perincherry  \\
+ \affaddr{University of Maryland} & \affaddr{University of Maryland} & \affaddr{University of Maryland}& \affaddr{University of Maryland} \\
+ \end{tabular}
+ }
+}
+
+% }}}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Document
+
+\usepackage[override]{cmtt} % make tt font tighter / less ugly
+
+
+\clubpenalty=10000 
+\widowpenalty = 10000 
+
+\hyphenation{de-a-non-y-mi-za-tion}
+\hyphenation{none-the-less}
+\begin{document}
+
+\urlstyle{tt}
+
+\maketitle
+
+\input{abstract}
+\input{intro}
+%\newpage
+\input{background}
+%\newpage
+\input{algorithm}
+\input{validation}
+%\input{related}
+\input{conclusion}
+\input{acks}
+
+
+\balance
+\nocite{*} 
+\bibliographystyle{abbrv}
+\bibliography{main}
+
+\end{document}
+

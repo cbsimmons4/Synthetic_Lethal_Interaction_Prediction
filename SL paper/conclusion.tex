@@ -1,0 +1,13 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+From our results, we are able to conclude that the idea of predicting SL and Non-SL using graph-vector embedding from programs like Node2Vec is plausible. Predictions can be made given only a network of genetic interactions. We were also able to get a sense of which kind of machine learning classification models work best, such as support vector clustering, random forests, and k-nearest neighbors. However, our best prediction was just over 75\%, with many other prediction model being a fair bit lower. In the future, we aim increase this accuracy.
+
+One idea to increase the accuracy of the models is to further explore the parameters of Node2Vec. For this paper, we merely used the default values for Node2Vec. There may be parameters that can be explored and tweaked  that may lead to a better graph-vector embedding. Additionally, there are other programs such as GraphSAGE, released in 2017, that also may be able to assist in finding relevant features on networks (Hamilton, 2017). Perhaps combining Node2Vec and GraphSAGE results could lead to better predictions. 
+
+Another idea to improve prediction accuracy is to further explore the top-performing machine learning classification models. For all of the models we used, we loosely explored tweaking the model parameters. Perhaps within each model, tweaking certain parameters may lead to better predictions. Additionally we could try to taking the consensus prediction for the top-performing models, and see if using the consensus leads to better predictions.
+
+Finally, our results show that our method of merging for cross-species predictions was not sufficient for improving prediction accuracy, but it also didn’t decrease accuracy. In the future, other merging methods may be explored. One such method that may be further explored is a cross-species merging technique used by Jason Fan, a computer science PhD candidate from the University of Maryland, in his work with HANDL (Homology Assessment across Networks using Diffusion and Landmarks).
+
+By better exploring parameters for both Node2Vec and the machine learning classification models, getting assistance from other programs like GraphSAGE, and finding better methods for cross-species merging, future work may leading to better prediction for SL and Non-SL interactions.
+

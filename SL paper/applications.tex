@@ -1,0 +1,869 @@
+\section{Applications}
+\label{sec:applications}
+
+In this section, we discuss three disparate applications that benefit
+from the highly accurate RTT measurements Ting provides.
+%
+We provide what we believe to be the first deanonymization technique that
+precludes certain circuits through application of latency measurements.
+%
+We also show how Ting can be used to find longer circuits that results
+in \emph{lower} end-to-end latency.
+%
+Finally, we show Ting's value as a network measurement platform by
+evaluating the diversity of Tor relays.
+
+\subsection{Deanonymization of Tor} % {{{
+\label{sec:deanon}
+
+% \subsubsection{Background} % {{{
+
+Tor seeks to balance anonymity with low-latency communication, and as a
+result, various techniques have been introduced to \emph{deanonymize}
+users by introducing small but noticeable fluctuations in their
+latencies~\cite{low-cost-traffic-analysis, practical-congestion, latency-leak, spying}.
+%
+
+
+A common form of deanonymization assumes that the attacker is somewhere
+on the path, from source to destination: either the attacker is on the
+three-node Tor circuit (consisting of an entry node, a middle node, and
+an exit node), or it is the destination itself (e.g., in the case of a
+malicious server).
+%
+The attacker's goal is to determine all of the nodes on the circuit,
+as this has been shown to assist in determining the source and
+destination~\cite{latency-leak}.
+
+
+Active probing attacks have been shown to make deanonymization with an
+on-path attacker possible.
+%
+The attacker can determine if Tor relay $t$ is on the victim
+source-destination path by (1)~creating many circuits through $t$ and
+sending traffic through them, and (2)~seeing if this induces extra
+delay on the victim's packet inter-arrival times.
+%
+This is a somewhat heavy-handed approach to deanonymization---it is
+expensive for an attacker to launch, as it requires creating multiple
+circuits simply to rule out a single Tor relay.
+%
+For such attacks to be feasible in practice, it is important that the
+number of active probes performed remain small.
+
+
+% }}}
+
+\subsubsection{Speeding up deanonymization with Ting} % {{{
+
+Here, we consider how knowledge of RTTs between all pairs of Tor nodes
+can speed up existing deanonymization algorithms.
+%
+The specific setting we consider is when the attacker is the
+destination: he already knows the exit node, and wishes to determine
+the entry and middle nodes.
+%
+Our insight is, broadly speaking, that because the attacker knows the
+end-to-end RTT $R_\mathsf{e2e}$, then we can rule out any circuit whose
+hops' RTTs add up to greater than $R_\mathsf{e2e}$.
+
+
+More concretely, consider the standard, RTT-unaware deanonymization
+process.
+%
+Initially, the attacker knows: its RTT $r$ to the exit node, the exit
+node $x$ itself, and the end-to-end RTT $R_\mathsf{e2e}$.
+%
+Suppose during the deanonymization algorithm, the attacker learns that
+Tor node $c$ is on the circuit.
+%
+Let $R(a,b)$ denote the RTT between Tor nodes $a$ and $b$.
+%
+Then the attacker learns the following by ``ignoring too-large RTTs'':
+
+\begin{itemize}
+
+\item If there exists no potential entry node $e$ such that $R(e,c) +
+R(c,x) + r \leq R_\mathsf{e2e}$, then $c$ cannot be the middle node in
+the circuit, and therefore must be the entry node.
+
+\item Alternatively, if there exists no potential middle node $m$ such
+that $R(c,m) + R(m,x) + r \leq R_\mathsf{e2e}$, then $c$ cannot be the
+entry node, and must be the middle node.
+
+\item If $c$ has been identified as the entry node, then any node $m$
+for which $R(c,m) + R(m,x) + r > R_\mathsf{e2e}$ cannot be in the
+circuit, and therefore $m$ need not be tested.
+
+\item Similarly, if $c$ has been identified as the middle node, then
+any node $e$ for which $R(e,c) + R(c,x) + r > R_\mathsf{e2e}$ cannot be
+in the circuit and need not be tested.
+
+\end{itemize}
+
+
+Each of these rules is somewhat conservative; the inequalities do not
+take the RTT between the source and the entry node into account, and
+thus the above criteria will likely remove only extreme outliers.
+%
+The RTT information that Ting provides can further speed up
+deanonymization by preferentially testing nodes who are more likely to
+be on the circuit.
+%
+Our insight is as follows: Nodes choose circuits at random, and
+therefore, if for node $i$ to be on the path, the source would have to
+be improbably close to or far from an entry node, then $i$ is probably not
+on the path.
+%
+Of course, the source being very close to or far from $i$ is not
+definitive proof that $i$ is not in the circuit, so we do not rule $i$
+out.
+%
+Instead, we assign a ``score'' to each node, and preferentially test
+nodes with the lowest score.
+%
+More concretely, we apply Algorithm~\ref{alg:target-selection} at every
+iteration of the deanonymization process.
+
+\begin{algorithm}[t!]
+
+\begin{enumerate}
+
+\item For each node $i$ who has not yet been ruled out:
+%
+\begin{enumerate}
+	\item Enumerate all possible circuits $C$ involving $i$, after
+	applying the above criteria for ignoring too-large RTTs.
+
+	\item Let $R(c)$ denote the sum of RTTs of circuit $c$, and let
+	$\mu$ denote the average RTT among all pairs of Tor nodes; then
+	$i$'s score is $\min_{c \in C} \{ | R_\mathsf{e2e} - (R(c) + r + \mu) |\}$.
+\end{enumerate}
+
+\item Probe the node with the lowest score, and then apply the criteria
+for ignoring too-large RTTs.
+
+\end{enumerate}
+
+\caption{Informed target selection for fast deanonymization.}
+\label{alg:target-selection}
+
+\end{algorithm}
+
+This algorithm uses $\mu$---the average RTT across the entire all-pairs
+data supplied by Ting---to approximate the expected (average) RTT between
+the source and its entry node.
+%
+Thus, this algorithm chooses the node whose expected end-to-end
+latency, $R(c) + r + \mu$, most closely approaches the measured
+end-to-end latency $R_\mathsf{e2e}$.
+
+
+\medskip
+
+\noindent
+\textbf{Weighted Node Selection.}~~
+%
+As stated, our informed target selection algorithm
+(Alg.~\ref{alg:target-selection}) assumes that each node in a Tor
+circuit is chosen uniformly at random from the set of all active nodes.
+%
+In practice, Tor no longer operates this way, but rather assigns a
+\emph{weight} to each node, reflecting how its measured bandwidth
+compares to the overall population's.
+%
+The benefit of preferentially choosing higher-capacity nodes is that it
+increases the throughput of the overall circuit, but the downside is
+the circuits become more predictable.
+%
+These weights can be incorporated into our algorithm by simply dividing
+each node's score by the node's weight.
+%
+However, in the remainder of this section, we evaluate Ting in its
+worst case scenario---when all weights are equal (traditional
+Tor).
+
+% }}}
+
+% Deanonymization figures {{{
+
+\begin{figure*}[t]
+\centering
+%
+\begin{minipage}[t]{.32\textwidth}
+\includegraphics[width=\textwidth]{figs/deanon-rtts}
+\caption{\label{fig:deanon-rtts} Distribution of RTTs from running Ting
+on all pairs of a random 50-node set of Tor nodes.}
+\end{minipage}
+%
+\hfill
+%
+\begin{minipage}[t]{.32\textwidth}
+\includegraphics[width=\textwidth]{figs/deanon-cdf-steps}
+\caption{\label{fig:deanon-cdf-steps} Knowledge of RTT between all Tor
+nodes speeds up deanonymization.}
+\end{minipage}
+%
+\hfill
+%
+\begin{minipage}[t]{.32\textwidth}
+\includegraphics[width=\textwidth]{figs/deanon-corr}
+\caption{\label{fig:deanon-corr} RTT knowledge is particularly
+useful when deanonymizing circuits with lower end-to-end RTT.}
+\end{minipage}
+%
+\end{figure*}
+
+% }}}
+
+\subsubsection{Evaluation} % {{{
+
+To evaluate how well RTT values can speed up deanonymization efforts,
+we used Ting to generate an all-pairs RTT dataset among a set of 50
+randomly chosen Tor nodes.
+%
+We present the distribution of RTTs in Figure~\ref{fig:deanon-rtts},
+and note that the shape of the distribution is consistent with that
+from Figure~\ref{fig:quova_gcd}.
+%
+Using this all-pairs dataset, we simulate three deanonymization
+techniques, each of which assumes the existence of a technique such as
+that described by Murdoch and Danzeis~\cite{low-cost-traffic-analysis}
+to brute-force probe whether a given Tor node is on a circuit.
+%
+For all of our results, we use 1000 runs from our simulator,
+with the source chosen uniformly at random from the set of Tor nodes.
+%
+In addition to the two techniques described above (that which ignores
+too-large RTTs, and our informed target selection), we also include as
+a baseline an RTT-unaware technique that simply brute-force tests nodes
+until it has discovered the entire circuit.
+
+
+The critical evaluation metric is how many probes it takes to
+deanonymize a circuit.
+%
+Recall that, because such brute-force probes are more
+bandwidth-intensive and time-consuming in practice, techniques which
+require fewer probes will finish more quickly and with less impact on
+the network as a whole.
+
+
+Figure~\ref{fig:deanon-cdf-steps} shows the distribution of the
+fraction of nodes each technique needed to probe in order to
+deanonymize the circuit.
+%
+Without any RTT knowledge, determining the entry and middle nodes of
+the circuit requires probing a median of 72\% of the network.
+%
+Simply ignoring too-large RTT values improves this noticeably,
+requiring probes to a median of 62\% of the network.
+%
+Incorporating the more intelligent target node selection described in
+Algorithm~\ref{alg:target-selection}, we see an even more drastic
+decline, requiring probes to a median of 48\% of the network.
+%
+In other words, through the application of Ting's RTT information,
+deanonymization efforts can experience a 1.5$\times$ speedup.\footnote{We
+have also evaluated the weighted version of our
+deanonymization algorithms, and find that, compared to a scheme that
+tests nodes in decreasing order of weight, the Ting-based approach
+speeds up deanonymization by a median of 2$\times$; an even greater
+improvement than with unweighted node selection.}
+
+
+
+
+Next, we seek to better understand for what circuits Ting's information
+helps deanonymize.
+%
+Intuitively, our deanonymization algorithms are best suited for
+circuits with low end-to-end RTTs.
+%
+As a simple example: if the end-to-end RTT were 50ms, then any node
+with an RTT greater than 50ms to the exit node could not be the middle
+node in the circuit.
+%
+On the other hand, if the end-to-end RTT were over one second (larger
+than any single RTT we measured), then any node could ostensibly be in
+the circuit.
+
+
+Using the same 1000 runs from our simulator, we plot in
+Figure~\ref{fig:deanon-corr} the fraction of nodes that we could ignore
+due to too-large RTTs, and compare that to the end-to-end RTT---from
+the source, through the circuit, to the destination.
+%
+This shows a strong correlation: the lower the end-to-end RTT, the more
+nodes Ting helps us to rule out, while for the absolute highest RTTs,
+Ting's information was not helpful.
+%
+However, interestingly, Ting successfully speeds up deanonymization
+efforts of circuits with moderate to high RTTs.
+%
+We conclude that, along with the algorithms from this section, Ting can
+considerably speed up the deanonymization for most circuits.
+
+%
+%% This result shows that, interestingly, the criteria we outlined
+%% commonly apply even when the end-to-end \subcamera{circuit}
+%% \addcamera{RTT} is larger than the largest RTT we measured.
+%
+
+% nssep I don't quite understand last sentence... not only
+% nssep for *finding* low RTTs (but also for finding large
+% nssep RTTs that would thwart deanonymization)
+
+% dml   doh, that was a totally broken end of the section..
+
+% }}}
+
+\subsubsection{Defenses} % {{{
+
+Unfortunately, defending against this kind of attack is difficult; as
+long as there is a pair of nodes that provide lower latency than other
+pairs, this deanonymization attack could apply.
+%
+One countermeasure would be to artificially inflate latencies within a
+circuit, but the Tor designers do not appear willing to accept this
+cost~\cite{tor}. 
+%
+Another approach that would slow down, but not completely eliminate,
+this deanonymization attack would be to randomize the \emph{length} of
+circuits.
+%
+The primary concern with this approach is that longer circuits
+typically result in greater latencies, but as we will show in
+Section~\ref{sec:longercirc}, latency measurements from Ting can guide
+the creation of longer circuits without higher latency.
+
+\medskip
+
+\noindent
+In summary, Ting's ability to measure all-pairs RTT among Tor nodes can
+considerably speed up existing deanonymization techniques, particularly
+(though not exclusively) with smaller end-to-end RTTs.
+%
+We believe that these techniques can be improved further, and that it is
+an interesting area of future work.
+
+
+% }}}
+
+% }}}
+
+\subsection{Improving Path Selection in Tor} % {{{
+\label{sec:pathsel}
+
+%% \todo{Consider adding a ref to: User's Get Routed: Traffic Correlation
+%% on Tor by Realistic Adversaries: Current method takes up to three
+%% months for a typical Tor relay, good candidate for being sped up by
+%% ting! \cite{get-routed}}
+
+
+%% \subsubsection{Background} % {{{
+
+Recall that a typical Tor circuit consists of three relays: one guard,
+one middle, and one exit. 
+%
+By default, a Tor client selects these relays at random according to
+the bandwidth capacity of each router, as reported by the set of
+trusted Tor bandwidth authorities.\footnote{Tor applies several other
+filters, such as requiring that relays come from distinct /16s; our
+results extend to such criteria, but we do not enumerate them here for
+ease of presentation.}
+%
+The rationale behind using three hops is that it is the minimum
+required to provide unlinkability between source and destination, and
+has thus been expected to avoid extra end-to-end latency.
+
+
+There have been considerable efforts toward reducing end-to-end
+RTTs~\cite{lastor,scalable-relay-selection,path-selection-metrics,tor-performance},
+but lacking the ability to efficiently predict a circuit's RTT
+complicates these efforts.
+%
+For instance, LASTor~\cite{lastor} relies on geographic distances as a
+proxy for latencies; while we have shown a strong correlation between
+distance and RTT (Section~\ref{sec:validation}), we demonstrate here
+that there are many instances where latency can be reduced in ways
+that geographic distance \emph{cannot} predict.
+
+
+Here, we investigate whether explicit measurements can guide path
+selection toward paths that have lower latency or longer length at
+modest performance cost.
+
+% }}}
+
+
+
+% TIV savings plot {{{
+\begin{figure}[t!]
+\centering
+%
+\includegraphics[width=0.5\textwidth]{figs/tiv-savings}
+\caption{\label{fig:tiv-savings} Savings from using a TIV relay instead
+of direct paths between two Tor nodes.}
+%
+\end{figure}
+% }}}
+
+\subsubsection{Triangle Inequality Violations} % {{{
+\label{sec:apps-tivs}
+% TIVS: 4834   Pairs: 1210  Tivable pairs: 833  Trips: 56694
+
+A \emph{triangle inequality violation} (TIV) in routing occurs when the
+lowest-latency path between two nodes $s$ and $d$ is not the direct
+path between them ($s \leftrightarrow d$), but rather through an
+intermediate ($s \leftrightarrow r \leftrightarrow d$).
+%
+In other words, when there is a TIV, the shortest distance between two
+points is not a straight line, and a relay can provide access to this 
+shorter path~\cite{detour,peerwise}.  % PW was about detecting them scalably.
+
+Here, we investigate to what extent TIVs exist in Tor, and whether they 
+permit lower-latency paths to a wide range of circuits.
+%
+To investigate this question, we make use of our 50-node all-pairs Ting
+dataset, and simply identify all pairs of nodes ($s,d$) such that there
+exists a node $r$ for which $R(s,d) > R(s,r) + R(r,d)$.
+%
+Surprisingly, we find that, for 69\% of all pairs of Tor nodes in
+our data, there exists at least one circuit that results in a
+TIV.\footnote{Since Ting estimates \emph{minimum} RTTs,
+this indicates that 69\% of pairs may exhibit at least one TIV, but
+does not directly allow us to reason about the average reduction in
+latency.}
+  
+
+Figure~\ref{fig:tiv-savings} shows the distribution of the percentage
+improvement in RTT from using a TIV relay.
+%
+Here, the $x$-axis reflects the ratio between $R(s,r) + R(r,d)$ to
+$R(s,d)$.
+%
+The median decrease in latency is 7.5\%; this is somewhat modest, but an
+all-pairs RTT dataset allows us to choose relays
+that offer greater RTT savings: 10\% of TIVs reduce RTTs by 28\% or more.
+
+To show that TIVs in Tor are not specific to high or low latency paths, 
+we plot in Figure~\ref{fig:tiv-cor}, for every TIV we find, the
+correlation between the default-path RTT and that through the TIV
+relay.
+%
+The number of available TIVs and overall savings are mostly consistent,
+regardless of the default path's RTT\@.
+%
+Substantial drops below $x=y$ typically indicate
+performance-insensitive Internet routing; smaller drops
+may indicate congestion.  Greater detail about such paths
+is provided by Detour~\cite{detour} or PeerWise~\cite{peerwise}.
+
+%% The long dips below the figure's 30\% line represents a
+%% source-destination pair who Ting measured to have significantly greater
+%% RTT than through possible intermediates.
+%
+\done{I'd like to discuss the dips: are they errors or are they
+reflections of weird routing policies?}
+
+\wontfix{ns: note; have to be careful that this isn't about
+  measurement uncertainty.  Informally, if each measurement
+  is +/- 10ms, then it would be easy to find two short ones
+  and one long one to get a 30ms improved detour. }
+
+
+Using Ting, we are able to demonstrate the prevalence of TIVs in the
+Tor network.
+%
+This has two important ramifications:
+%
+First, \emph{geographic distance is an imperfect proxy for RTTs in Tor}.
+%
+Distances do not violate the triangle inequality, while Tor often does.
+%
+Direct measurements of node-to-node latencies are necessary to 
+find these paths.
+%
+Second, the traditional assumption that longer circuits yield
+greater end-to-end latency is not necessarily true: 
+\emph{longer circuits can reduce latencies}, if chosen in a way that
+favors TIVs.
+%
+Encouraged by this result, we now investigate: do circuits that are
+long but quick compromise user anonymity?
+
+
+% }}}
+
+% TIV correlation plot {{{
+
+\begin{figure}[t!]
+\centering
+%
+\includegraphics[width=0.5\textwidth]{figs/tiv-cor}
+\caption{\label{fig:tiv-cor} TIV-capable pairs are not relegated to
+any particular range of RTTs.}
+%
+\end{figure}
+
+% }}}}
+
+\newpage
+\subsubsection{Longer Circuits} % {{{
+\label{sec:longercirc}
+
+\done{Needs another pass badly}
+
+
+Tor's default of three-hop circuits balances between ano\-nymity and
+end-to-end latencies, but are there longer circuits that actually
+\emph{reduce} latencies? Longer circuits may increase anonymity by
+frustrating tracing, but of course increases the resource use at relays.
+%
+To answer this question, we again make use of the 50-node, all-pairs
+RTT dataset provided by Ting, and calculate circuits with lengths 
+from 3 to 10.
+%
+We sample 10,000 random circuits for each length $\ell$ and scale our
+results to the maximum number of circuits: $50 \choose \ell$.
+
+
+\medskip
+
+\noindent
+%
+\textbf{Round-Trip Times.}~~
+%
+Figure~\ref{fig:pdf-rtts} shows, for varying circuit lengths, how many
+circuits are available for a given RTT\@.
+%
+Clearly, circuits with more hops are able to obtain higher maximum
+RTTs: for instance, we identified no 3-hop circuits in our dataset with
+RTT over 1~second, but we identified over 1M 10-hop circuits with RTT over
+2 seconds.
+%
+More interestingly, observe the range of 200--300ms; in our dataset,
+we find roughly 10,000 3-hop circuits able to achieve RTTs in this
+range.
+%
+But we are able to find an order of magnitude more 4-hop circuits able
+to achieve the same RTTs---for 10-hop circuits, there are \emph{four
+orders of magnitude} more circuits capable of achieving the same RTT\@.
+%
+This scales up so drastically because of how quickly $50 \choose \ell$
+grows: though the probability of any given $\ell$-hop circuit having a
+given RTT is low, there are many circuits for even moderate sizes of
+$\ell$.
+
+
+These results show that, if chosen with knowledge of inter-Tor-node
+RTTs, \emph{longer paths can be used in lieu of default 3-hop paths
+without imposing greater RTTs}.
+
+
+\medskip
+
+\noindent
+%
+\textbf{Circuit Diversity.}~~
+%
+One potential concern, however, is that these long circuits with low
+latency reduce anonymity by relying on a few well-connected nodes.
+%
+To evaluate this concern, we plot in Figure~\ref{fig:pdf-skew}, for
+each circuit length, the median probability of a node being on a path
+with RTT = $x$.
+%
+Intuitively, this metric captures how ``entropic'' the set of circuits
+are for a given RTT and path length.
+%
+For instance, in our dataset, the set of 10-hop circuits capable of
+achieving an RTT of 1.9~seconds is very small: this is reflected by the
+small value at $x=$1.9.
+%
+Figure~\ref{fig:pdf-skew} shows that, for many values of circuit
+length, low-latency circuits do not rely on a small fraction of peers;
+it is only 10-hop circuits which significantly sacrifice entropy for
+RTTs less than 500ms.
+
+
+Using measurements like those in Figure~\ref{fig:pdf-skew}, if an
+attacker knows a victim's circuit length and end-to-end RTT, then he
+may be able to quickly pare down the set of potential circuits in use.
+%
+The most entropic region for any given circuit length is naturally in
+the intermediate RTT values; choosing circuits in this range of RTT
+values thwarts such attacks.
+
+
+A user can increase the number of potential circuits for a given RTT by
+consulting these data that Ting provides.
+%
+For instance, suppose the user seeks a circuit in the range of
+200--300~ms.
+%
+Within this range of RTTs, there are many 3-hop,
+4-hop, and 5-hop circuits. % ---note the extent to which these distributions overlap.
+%
+As a result, were an attacker to learn the end-to-end RTT (e.g.,
+if the attacker were running a web server and sought to identify which
+users were connecting via Tor), there would be over two orders of
+magnitude more circuits that the user could have constructed than if he
+had restricted himself only to 3-hop nodes.
+
+
+
+% actually; latency is likely a good proxy for network
+% resource use; senselessly transiting across continents is
+% a bit wasteful.
+
+\medskip
+
+\noindent
+%
+\textbf{Ramifications of Longer Circuits.}~~
+%
+The use of longer circuits represents a tragedy of the commons: the
+end-users may benefit, but longer circuits consume more resources from
+the Tor network as a whole.
+%
+However, because circuits are determined strictly by the source, there
+is little the system can do to prevent a selfish but rational user from
+adopting longer circuits.
+%
+We believe that approaches to provide incentive-compatibility in
+Tor~\cite{tor-incentives,par,xpay} are of increasing importance as
+longer circuits become feasible. 
+
+
+
+Although longer circuits can help defend against attackers external to
+Tor, it is less clear how they fare in the presence of active
+adversaries within the Tor network.
+%
+Assuming a fixed fraction of active, bad Tor nodes, as circuits grow
+longer, the probability increases that an adversary is one of the
+chosen hops---this, too, makes deanonymization by traffic analysis
+possible~\cite{get-routed}.
+%
+Whether this increased probability outweighs the obfuscation of longer
+circuits merits future study.
+
+% Longer circuits can be fast too, plot  {{{
+\begin{figure}[t!]
+\centering
+
+\includegraphics[width=0.5\textwidth]{figs/pdf-rtts}
+\caption{\label{fig:pdf-rtts} Longer Tor circuits have more options for
+lower-latency paths, as well as higher-latency paths. Each line is
+annotated with its corresponding circuit lengths.}
+
+\end{figure}
+
+% }}}
+
+
+
+\medskip
+
+\noindent
+%
+The results in this section suggest that there is potential for a
+larger design space than Tor's three-hop default: longer hops need not
+induce greater latency. 
+%
+How this should be leveraged to achieve different balances between
+security and performance is an interesting area of future work.
+
+
+% not only applicable, but all the
+% more important in light of the feasibility of longer circuits.
+
+% }}}
+
+% }}}
+
+\subsection{Ting as a Measurement Platform} % {{{
+\label{sec:ting-msmt-platform}
+
+% Circuit probabilities plot {{{
+
+\begin{figure}[t!]
+\centering
+
+\includegraphics[width=0.5\textwidth]{figs/pdf-skew}
+\caption{\label{fig:pdf-skew} Choosing shorter or longer paths
+induces skew in the probability of a given node being selected to
+be on a circuit.}
+
+\end{figure}
+
+% }}}
+
+%% \subsubsection{Background} % {{{
+
+The final application we consider is arguably Ting's most natural: as a
+platform for directly measuring latencies between hosts that
+researchers may not otherwise have access to.
+
+King~\cite{king} measured the latency between DNS servers
+thought to be near clients or servers in the Internet to
+estimate the latency between those hosts.  In 2002, Gummadi
+\etal{} found that 72--79\% of authoritative name servers
+supported remote recursive queries to support King; we find that only 3\%
+continue to today, presumably due to concerns over
+amplification attacks.  This change inspired us to apply Ting to
+the same problem: to estimate latency between hosts thought to
+be near Tor relays.  Relative to King, Ting has an
+advantage in accuracy in that the Tor node representing a
+prefix is a member of that prefix, rather than an
+authoritative name server that may be much better connected
+or remote.  However, Ting has the disadvantage in that not
+every residential subnet has a Tor node.  In this section, 
+we evaluate this coverage and show that Tor nodes are 
+spread between residential networks and data centers.
+
+%% 
+%% 
+%% In addition to the security applications discussed above, Ting opens up the ability to use Tor as a measurement platform, which offers interesting new insights not achievable in previous work. 
+%% %
+%% Although various techniques exist for measuring latency \cite{king, bismark, atlas, samnose}, all that we have found \todo{ns: huh?} either predict latencies without actually measuring them, or rely on extrapolation in order to make a guess about the latency, without actually traversing the entire physical link.
+%% %
+%% The King technique traversed the majority of the path and boasted the impressive ability to be able to measure the latency between any two arbitrary end hosts on the internet \cite{king}, but unfortunately its technique is no longer applicable because few DNS servers still support open recursive DNS queries. 
+%% %
+%% \todo{More here, probably..}
+%% 
+% }}}
+
+% \paragraph*{Coverage} % {{{
+
+\medskip
+
+\noindent
+%
+\textbf{Coverage.}~~
+%
+We can evaluate Ting's coverage in three dimensions:
+geography, network, and host type.  The geographical
+coverage of Tor is well-known: On one hand, many countries
+are represented: Tor Metrics~\cite{tor-metrics} reported 77
+countries with relays in November 2014. On the other
+hand, there are exceptional countries in which Tor is
+blocked.
+
+In terms of network diversity, we show the number of unique /24 IP
+address prefixes and the total number of relays in the Tor network from
+February 28, 2015 to April 28, 2015 in Figure~\ref{fig:twentyfours}.
+%
+We consider /24 prefixes because they represent a network allocation
+likely to be geographically clustered.
+%
+At any point in this two-month window, we observed between 5426 and
+6044 unique /24s.
+%
+% Both the number of /24s and total relays grew by roughly 1000 over
+% this time period. 
+%
+Compared with past data collected by Tor Metrics~\cite{tor-metrics},
+the total number of relays has grown by roughly 30\% since one year
+prior.
+%
+If the Tor network continues to grow, it will become increasingly
+useful for medium-scale measurement across the network.
+
+Finally, host types are diverse.  The pool of relays is predominantly
+volunteer-run, and thus many relays are run from within homes.
+%
+To quantify the number of residential hosts, we extended the
+residential detection technique described by Schulman et
+al.~\cite{pingin}, which involves classifying hosts based on their
+reverse DNS name, including suffix and presence of numbers---the
+original technique is only intended for hosts within the U.S., while
+our extension also considers hosts in Europe. 
+%
+Using this technique, we found that, of the 5484 currently running Tor
+relays with a reverse DNS name, at least 3355, or roughly 61\%, are
+residential. 
+%
+%Using this technique, we found that 3,355, or 61\% of the  Tor relays
+%listed in the public directory are residential. 
+% 
+This underestimates the fraction of residential hosts both because
+there are a number of Tor relays outside of the U.S.  and Europe which
+are not accounted for, and because the remaining 1150 of the 6634
+currently running relay addresses have no reverse DNS name.
+% 
+Data centers are also represented: 361 are at hosting sites identified
+by reverse DNS name ({\tt linode.com}, 
+{\tt amazonaws.com}, 
+{\tt ovh.com}, 
+{\tt cloudatcost.com},
+{\tt your-server.de},
+and {\tt leaseweb.com}),
+and another 345 are within Digital Ocean's IP address range.
+
+\wontfix{ns: I know this is going to get us dinged for informality.  
+  Too late to do well, though.}
+
+%% This is an exciting discovery, as it suggests that Ting can be used to measure
+%% latencies from one residential host to another, and thus can offer insight
+%% into latencies within residential networks across the world. 
+%
+%% As far as we know, Ting is the first tool to offer this ability at scale
+%% without requiring users to cooperate by downloading and running software, or
+%% without installing infastructure in their homes. 
+%% %
+%% At the time of writing, even those techniques that have obtained good results
+%% using large-scale software and hardware deployments, such as Bismark, RIPE
+%% Atlas, and Sam Knows \cite{bismark,ripe,samnose}, only collect latencies from homes to well-known hosts; they do not provide any insight into the latencies between the homes at which they are deployed. 
+%% 
+%% 
+%% While Ting fills in some currently existing gaps in the meausurement
+%% community, it also has its own shortcomings that are better achieved with
+%% other tools.
+%% %
+%% Ultimately, we view Ting as complementary to all of the techniques cited
+%% above, and hope that they can be combined in future work to gain new insight
+%% into today's networks. 
+% }}}
+
+% Tor /24 count plot {{{
+
+\begin{figure}[t]
+\centering
+%
+%\begin{minipage}[t]{.48\textwidth}
+\includegraphics[width=.5\textwidth]{figs/24-over-time}
+\caption{\label{fig:twentyfours} Number of /24s represented in the
+Tor network from February to April 2015.}
+%\end{minipage}
+% %
+% \hfill
+% %
+% \begin{minipage}[t]{.48\textwidth}
+% \includegraphics[width=\textwidth]{figs/residential-map}
+% \caption{\label{fig:residential-map} Relays classified as are residential
+% are denoted by white markers, while those classified as non-residential are black.}
+% \end{minipage}
+% %
+\end{figure}
+
+% }}}
+
+% }}}
+
+
+\subsection*{Summary} % {{{
+
+This section demonstrated a wide swath of applications that benefit
+from Ting's accurate RTT measurements.
+%
+We believe the set of applications to which Ting is beneficial is both
+broader and deeper than what is covered here.
+%
+But even with these few examples, we can conclude that Ting's accurate,
+all-pairs RTT estimation can be an extremely powerful tool in securing
+and improving Tor.
+
+% }}}

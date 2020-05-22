@@ -1,0 +1,67 @@
+\begin{thebibliography}{1}
+
+\bibitem{boone_exploring_2007}
+C.~Boone, H.~Bussey, and B.~J. Andrews.
+\newblock Exploring genetic interactions and networks with yeast.
+\newblock {\em Nature Reviews. Genetics}, 8(6):437--449, June 2007.
+
+\bibitem{costanzo_global_2016}
+M.~Costanzo, B.~VanderSluis, E.~N. Koch, A.~Baryshnikova, C.~Pons, G.~Tan,
+  W.~Wang, M.~Usaj, J.~Hanchard, S.~D. Lee, V.~Pelechano, E.~B. Styles,
+  M.~Billmann, J.~van Leeuwen, N.~van Dyk, Z.-Y. Lin, E.~Kuzmin, J.~Nelson,
+  J.~S. Piotrowski, T.~Srikumar, S.~Bahr, Y.~Chen, R.~Deshpande, C.~F. Kurat,
+  S.~C. Li, Z.~Li, M.~M. Usaj, H.~Okada, N.~Pascoe, B.-J. San~Luis,
+  S.~Sharifpoor, E.~Shuteriqi, S.~W. Simpkins, J.~Snider, H.~G. Suresh, Y.~Tan,
+  H.~Zhu, N.~Malod-Dognin, V.~Janjic, N.~Przulj, O.~G. Troyanskaya,
+  I.~Stagljar, T.~Xia, Y.~Ohya, A.-C. Gingras, B.~Raught, M.~Boutros, L.~M.
+  Steinmetz, C.~L. Moore, A.~P. Rosebrock, A.~A. Caudy, C.~L. Myers,
+  B.~Andrews, and C.~Boone.
+\newblock A global genetic interaction network maps a wiring diagram of
+  cellular function.
+\newblock {\em Science (New York, N.Y.)}, 353(6306), 2016.
+
+\bibitem{cowen_network_2017}
+L.~Cowen, T.~Ideker, B.~J. Raphael, and R.~Sharan.
+\newblock Network propagation: a universal amplifier of genetic associations.
+\newblock {\em Nature Reviews Genetics}, 18(9):551--562, Sept. 2017.
+
+\bibitem{grover_node2vec:_2016}
+A.~Grover and J.~Leskovec.
+\newblock node2vec: {Scalable} {Feature} {Learning} for {Networks}.
+\newblock In {\em Proceedings of the 22nd {ACM} {SIGKDD} {International}
+  {Conference} on {Knowledge} {Discovery} and {Data} {Mining} - {KDD} '16},
+  pages 855--864, San Francisco, California, USA, 2016. ACM Press.
+
+\bibitem{hamilton_representation_nodate}
+W.~L. Hamilton, R.~Ying, and J.~Leskovec.
+\newblock Representation {Learning} on {Graphs}: {Methods} and {Applications}.
+\newblock page~23.
+
+\bibitem{leiserson_multi-species_2017}
+M.~D.~M. Leiserson, J.~Fan, A.~Cannistra, I.~Fried, T.~Lim, M.~Crovella, and
+  B.~Hescott.
+\newblock A {Multi}-{Species} {Functional} {Embedding} {Integrating} {Sequence}
+  and {Network} {Structure}.
+\newblock page~20, 2017.
+
+\bibitem{mikolov_distributed_2013}
+T.~Mikolov, I.~Sutskever, K.~Chen, G.~S. Corrado, and J.~Dean.
+\newblock Distributed {Representations} of {Words} and {Phrases} and their
+  {Compositionality}.
+\newblock In C.~J.~C. Burges, L.~Bottou, M.~Welling, Z.~Ghahramani, and K.~Q.
+  Weinberger, editors, {\em Advances in {Neural} {Information} {Processing}
+  {Systems} 26}, pages 3111--3119. Curran Associates, Inc., 2013.
+
+\bibitem{oneil_synthetic_2017}
+N.~J. O'Neil, M.~L. Bailey, and P.~Hieter.
+\newblock Synthetic lethality and cancer.
+\newblock {\em Nature Reviews Genetics}, 18(10):613--623, Oct. 2017.
+
+\bibitem{shen_synthetic_2018}
+J.~P. Shen and T.~Ideker.
+\newblock Synthetic {Lethal} {Networks} for {Precision} {Oncology}: {Promises}
+  and {Pitfalls}.
+\newblock {\em Journal of Molecular Biology}, 430(18, Part A):2900--2912, Sept.
+  2018.
+
+\end{thebibliography}

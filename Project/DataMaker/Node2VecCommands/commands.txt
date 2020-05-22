@@ -1,0 +1,5 @@
+./node2vec -i:graph/runnable.edgelist -o:emb/results2.emb -l:3 -d:2 -p:0.3 -v
+
+./node2vec -i:graph/runnable.edgelist -o:emb/results24.emb -l:3 -d:24 -p:0.3 -v
+
+./node2vec -i:graph/runnable.edgelist -o:emb/results128.emb -l:3 -d:128 -p:0.3 -v

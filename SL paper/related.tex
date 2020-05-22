@@ -1,0 +1,52 @@
+% \section{Related Work}
+% \label{sec:related}
+
+% Ting builds upon and attempts to complement three perpendicular fields of related work: (1) denanonymization of Tor circuits, (2) improvement of Tor path selection algorithms, and (3) large-scale network measurement. 
+
+% \if 0
+% \subsection{Deanonymization} %{{{
+
+% \begin{itemize}
+% \item Practical Congestion Attack on Tor: Adversary controls an exit node, injects javascript into each request forcing client to ping exit node at fixed rate. Adversary then floods possible entry nodes one-by-one until delay is observed in ping time. \cite{practical-congestion}
+% \item How Much Anonymity Does Network Latency Leak?: (1) Two colluding web serves determine if pair of connections came from same Tor user or two different users by comparing distrubtions of RTTs of entire circuit. (2) Suggest ability to triangulate a client from a series of Murdoch-Danezis attacks with the help of Vivaldi or King. \cite{latency-leak}
+% \item Low Cost Traffic Analysis of Tor: the first significant paper on deanonymizing Tor. Introduces the Murdoch-Danezis attack cited / built-upon by many later attacks. Attack involves using a malicious web server to introduce a distinct traffic pattern in a stream then probing nodes until that same pattern is found \cite{low-cost-traffic-analysis}. \cite{practical-congestion} proves that it no longer works given the current size of the Tor network because there's too much noise.
+% \item User's Get Routed: Traffic Correlation on Tor by Realistic Adversaries: Current method takes up to three months for a typical Tor relay, good candidate for being sped up by ting! \cite{get-routed}
+% \item Syping in the Dark: TCP and Tor Traffic Analysis: assume adversary can eavsdrop on clients but not on network, goal is to determine if any clients are trying to access restricted site S, attack by inducing TCP congestion between exit relay and S and observing which clients are affected by it. \cite{spying}
+% \item TorScan: Tracing Long-Lived Connections and Differential Scanning Attacks: given a relay X, they claim to be able to exploit the Tor protocol messages to determine all other relays that X is directly connected ot in a circuit. Given this, if they control an exit node, then they know the second node, and can scan the second to find the first. Downside is this is only practical for long-lived connections (ssh, large files, IM).\cite{torscan}
+% \item Traffic Analysis Against Low-Latency Anonymity Networks Using Available Bandwidth Estimation: same kind of attack as others but induce and monitor bandwidth fluctuations as opposed to latency. \cite{bandwidth-analysis}
+% \end{itemize}
+
+% % }}}
+% \fi
+
+% \if 0
+% \subsection{Path Selection} % {{{
+
+% \begin{itemize}
+% \item \todo{Still need to find some of these...}
+% \end{itemize}
+
+% % }}}
+% \fi
+
+% \subsection{Measurement} % {{{
+
+% \begin{itemize}
+% \item IDMaps: requires large amount of additional infastructure which isnt very practical in terms of cost, deployment, and speed. Has been outdone by many successors such as King. \todo{is this appropriate, since King mentioned it as a related work, and already proved it was better than ID Maps?} \cite{idmaps}
+% \item King: lightweight tool for measuring the latency between two arbitrarily-selected end hosts. Finds a DNS resolver near each host (one must support recursive requests), then sends a DNS query which traverses the path between the two servers, and uses subtraction to find the latency. Makes the assumption that end hosts are geographically near their local DNS server. \cite{king}
+% \item Estimating Hop Distance Between Arbitrary End-Host Pairs: requires deployment of additional infastructure, and still only computes estimates, rather than traversing the entire path. \cite{estimating-hop-distance}
+% \item Predicting Internet Network Distance with Coordinates-Based Approaches: uses algorithms based on geometric model of the Internet to predict latencies. May produce accurate results in general, but is not related to the current state of the path between two nodes, and thus would not be useful for looking at latencies changing over time or in response to events.  \cite{predicting-network-distance}
+% \item Pathchar: similar technique as traceroute, but gathers more statistics. Uses same basic idea of subtracting components from a sum which contains the desired measurements. \cite{pathchar}
+% \item Vivaldi: algorithm for computing syntehtic coordinates for intnernet hosts -- no required infastructure, only needs to contact a few other hosts to gain enough information about itself, scales well, median relative error of 11\% for embedding 1740 Internet hosts within a 2d Euclidiean model \cite{vivaldi}
+% \item Treeple: Latency estimation between peers in a distributed system based solely on their position. Unique qualities: (1) provably more secure than previous methods, (2) positions based on actual network topology rather than Euclidiean coordinates, (3) highly stable, do not require maintainence very often. Median relative error is 26\% for dataset of 200,000 measurements (Vivaldi was 25\%) \todo{could we compare to this same dataset?}\cite{treeple}
+% \item Sequoia (treeness of Internet latency): system for embedding latency and bandwidth into trees, can be used for server selection,.. \cite{sequoia}
+% \item Netvigator: network proimity and latency estimation tool that uses information obtained from probing small number of landmark nodes and intermediate routers to identify closest nodes \cite{netvigator}
+% \item Global Network Positioning: models the Internet as a geometric space and computes geometric coordinates to characterize positions of hosts in the Internet, used to accurately predict network distances \cite{gnp}
+% \item NetFlow Latency Estimation: utilizes existing NetFlow architecture, approximates delay samples from other background flows, has median relative error of less than 20\% for flows of size > 100 packets \cite{netflow}
+% \item Htrae: \cite{htrae}
+% \item iPlane: \cite{iplane}
+% \item Tor Metrics? \cite{tor-metrics}
+% \end{itemize}
+
+
+% % }}}

@@ -1,0 +1,26 @@
+\section{Methods}
+\label{sec:methods}
+For our research, we used the following initial datasets: 
+
+\href{https://obj.umiacs.umd.edu/lrgr/ppi-gi-data/gi/collins/sc/collins-sc-emap-gis-std.tsv
+}{\textit{Dataset Sc}}
+
+\href{https://obj.umiacs.umd.edu/lrgr/ppi-gi-data/gi/roguev/sp/roguev-sp-emap-gis-std.tsv
+}{\textit{Dataset Sp}}
+
+
+The file, collins-sc-emap-gis-std-tsv, contains a representation of the gene interactions networks in Sc yeast, and roguev-sp-emap-gis-std.tsv contains a representation of the gene interactions networks in Sp yeast. Each data file contains a list of edges in the respective network, geneA interacting with geneB, and a category for each interaction, SL, Non-SL, or Inconclusive. The data set also provides an S-score for each interaction, but for our project, we are not concerned with the S-score.
+
+The first step for this data is to generate a runnable edgelist file that can be used as input for the Node2Vec program. Since Node2Vec only allows for integers in the runnable edgelist file, we started by assigning unique integer id values to each gene in both files. We were then able to build the runnable file. Note that the runnable edgelist file does not contain any edge-weights, so the Node2Vec will not take into account whether a given gene interaction is SL or Non-SL. Node2Vec only knows that an interaction merely exists between two genes. We used the default values for Node2Vec, that is 128 dimensions, 80 length of walk per source, 10 walks per source, 10 context size of walks per source, 1 epoches in SDG, undirected, and unweighted. Each parameter for Node2Vec is described in their paper (Grover, 2016). With the embedded file from Node2Vec’s output, we have each gene’s id assigned to a 128 dimensional vector. From there, we were able to reassign the genes to their respective vector using the id data. We were are also able to construct a file of the following format for each gene interaction: geneA, Adim1-Adim128, geneB, Bdim1-Bdim128, score, category. This shows that gene A interacts with gene B, and provides the vector for both gene A and gene B, as well as their category (SL, Non-SL, or Inconclusive). From there, in order combine both interacting genes into a single vector that describes their relationship, we took the Hadamard product of each gene interaction, having a file with the following format: geneA, geneB, HadamardDim1-HadamardDim128, score, category. Note that we made this kind of file format for both Sc and Sp, two separate files. 
+
+In order to prepare for machine learning, we made the note that there are many more Non-SL interactions than SL interactions for both sets of data. In the Sp yeast, there were 5,516 SL interactions and 99,079 Non-SL interactions. In Sc yeast, there 7,239 SL interactions and 125,604 Non-SL interactions. For the sake of machine learning classification, we wanted to keep the number of data points for each type even, so for each file, we took all of the SL interactions and a random sample of the same of Non-SL as SL . This means for the Sp yeast, we had all 5,616 SL interactions and 5,616 randomly sampled Non-SL interactions. Then in the Sc yeast, we have all 7,239 SL and a random sample of 7,239 Non-SL interactions. Note that all inconclusive interactions were excluded, as we can’t train nor cross-validate with inconclusive data. 
+
+At this point, we were fit to continue onto running machine learning model on both species in order to predict whether an interaction is SL or Non-SL. We ran the data through six different classifiers: logistic regression, naive bayes, decision tree, support vector clustering, random forest, and k-nearest neighbor. We only makes predictions based off the 128 dimensions of the Hadamard product, excluding score. 70\% of the data was used for training data, and the remaining 30% of data was testing data.
+
+After making predictions on individual species, we shifted our focus to cross-species networks. To merge the species, Sp and Sc, we acquired the following homolog dataset:
+
+https://obj.umiacs.umd.edu/lrgr/ppi-gi-data/homologs/sc-sp/sc-sp-homologs.txt
+
+This file is a list of all of the homologs shared by Sp and Sc yeast. For merging, we overlapped both species’ networks and connected them via the homologs. From there, the same process occurred for the merged network as we did for the individual species network: we assigned ids to the genes, made a runnable file for Node2Vec, took the Hadamard product, took all of the SL interactions, randomly sampled the Non-SL interactions, and ran the classifier models on the networks. We had three kinds of merged files: two were Sp merged and Sc merged, where we merged the networks for Node2Vec and then separteted them again for machine learning classification, and other one is ScSp merged, merging during both Node2Vec and the machine learning classification. 
+
+In the following sections we discuss the machine learning classification results for all 5 kinds of datasets: Sp, Sc, Sp merged, Sc merged, and ScSp merged. 
